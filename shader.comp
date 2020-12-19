@@ -1,0 +1,14 @@
+#version 430
+layout(set = 0, binding = 1, std430) buffer Output_ {
+	float values[];
+} output_;
+
+layout(set = 0, binding = 0, std430) buffer readonly Input_ {
+	float values[];
+} input_;
+
+void main(){
+	float curVal = input_.values[gl_GlobalInvocationID.x];
+	float doubleVal = 2. * curVal;
+	output_.values[gl_GlobalInvocationID.x] = doubleVal;
+}
