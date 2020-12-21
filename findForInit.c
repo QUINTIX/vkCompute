@@ -1,5 +1,6 @@
 #include "findForInit.h"
 #include <stdbool.h>
+#include <time.h>
 
 uint32_t vkGetBestComputeQueueIndex(Ctx *context, VkPhysicalDevice physicalDevice) {
     uint32_t queueFamilyPropertiesCount = 0;
@@ -84,7 +85,7 @@ VkPhysicalDevice vkGetPhysicalDevice_IGPOrDefault(
         return device;
     }
 
-        VkPhysicalDevice* const physicalDevices = (VkPhysicalDevice*)malloc(
+    VkPhysicalDevice* const physicalDevices = (VkPhysicalDevice*)_alloca(
         sizeof(VkPhysicalDevice) * physicalDeviceCount
     );
 

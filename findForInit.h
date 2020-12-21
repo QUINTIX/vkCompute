@@ -17,7 +17,7 @@ static _Thread_local Ctx ctx;
     TRY(&ctx){ \
         RAISE_ON_BAD_RESULT(result) \
     } CATCH {\
-        fprintf(stderr, ctx.msg); \
+        fprintf(stderr, "%s", ctx.msg); \
         free(ctx.msg); \
         exit(EXIT_FAILURE); \
     }
