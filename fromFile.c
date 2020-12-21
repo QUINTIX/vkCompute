@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include <stddef.h>
 #include <vulkan/vulkan.h>
+#include <time.h>
 
 #include "tryCatch.h"
 #include "findForInit.h"
@@ -91,9 +92,12 @@ void doStuffOnDevice(Ctx *context_, VkPhysicalDevice physicalDevice) {
     RAISE_ON_BAD_RESULT(vkMapMemory(logicalDevice, 
             memory, 0, memorySize, (VkMemoryMapFlags)0, (void *)&payload));
 
+    clock_t beforeWrite = clock();
+
     for(uint32_t k = 0; k < memorySize / sizeof(float); k++){
         payload[k] = (float)k * 0.5f;
     }
+    clock_t afterWrite = clock();
 
     vkUnmapMemory(logicalDevice, memory);
 
@@ -123,6 +127,9 @@ void doStuffOnDevice(Ctx *context_, VkPhysicalDevice physicalDevice) {
     VkShaderModule shader_module = loadFromSPVFile(&ctx, logicalDevice,
             (VkShaderModuleCreateFlags)0, "shader.comp.spv");
     
+
+    clock_t afterLoadShader = clock();
+
     #define NUM_BINDINGS 2
     VkDescriptorSetLayoutBinding descriptorSetLayoutBindings[NUM_BINDINGS] = {
       {
@@ -305,17 +312,21 @@ void doStuffOnDevice(Ctx *context_, VkPhysicalDevice physicalDevice) {
         0, (const VkSemaphore*)NULL
     };
 
+    clock_t beforeSubmit = clock();
     RAISE_ON_BAD_RESULT(vkQueueSubmit(queue, 1, &submitInfo, 
         (VkFence)NULL));
 
     RAISE_ON_BAD_RESULT(vkQueueWaitIdle(queue));
 
+    clock_t beforeReMap = clock();
     RAISE_ON_BAD_RESULT(vkMapMemory(logicalDevice,
             memory, 0, memorySize, (VkMemoryMapFlags)0, (void *)&payload));
 
     const uint32_t numfloats = bufferSize / sizeof(float);
     const float* inputBuffer = payload;
     const float* outputBuffer = payload + numfloats;
+
+    clock_t finallyDone = clock();
 
     printf("input buffer\n");
     for(uint32_t k=0; k < numfloats; k++){
@@ -331,7 +342,14 @@ void doStuffOnDevice(Ctx *context_, VkPhysicalDevice physicalDevice) {
             printf("\n");
         }
     }
-    
+    printf("\n %s\t%lu\n %s\t%lu\n %s\t%lu\n %s\t%lu\n %s\t%lu\n %s\t%lu\n %s\t%lu\n",
+        "beforeWrite", beforeWrite,
+        "afterWrite", afterWrite,
+        "afterLoadShader", afterLoadShader,
+        "beforeSubmit", beforeSubmit,
+        "beforeReMap", beforeReMap,
+        "finallyDone", finallyDone,
+        "CLOCKS_PER_SEC", (unsigned long)CLOCKS_PER_SEC);
 }
 
 int main(int argc, const char * const argv[]) {
@@ -356,20 +374,11 @@ int main(int argc, const char * const argv[]) {
     };
 
     VkInstance instance;
-    TRY(&ctx){
-        RAISE_ON_BAD_RESULT(
-            vkCreateInstance(&instanceCreateInfo, (const VkAllocationCallbacks*) NULL, 
-            &instance)
-        );
-    } CATCH {
-        fprintf(stderr, "%s\n", ctx.msg);
-        free((void*)ctx.msg);
-        exit(EXIT_FAILURE);
-    }
-
-    VkPhysicalDevice physicalDevice = vkGetPhysicalDevice_IGPOrDefault(instance);
+    BAIL_ON_BAD_RESULT(vkCreateInstance(
+            &instanceCreateInfo, (const VkAllocationCallbacks*) NULL, &instance));
 
     TRY(&ctx){
+        VkPhysicalDevice physicalDevice = vkGetPhysicalDevice_IGPOrDefault(instance);
         doStuffOnDevice(&ctx, physicalDevice);
     } CATCH {
         fprintf(stderr, "%s\n", ctx.msg);
