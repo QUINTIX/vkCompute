@@ -6,9 +6,8 @@
 #ifndef FIND_FOR_INIT_H
 #define FIND_FOR_INIT_H
 
-static _Thread_local Ctx ctx;
-/*if the entirely redundant _Thread_local does not make it abundantly clear: 
-	ctx is _not_ shared between c files */
+static Ctx ctx; /* ctx is explicitly _not_ shared between c files,
+if static does not make that abundantly clear */
 
 #define RAISE_ON_BAD_RESULT(result) \
     if (VK_SUCCESS != (result)) { raise(&ctx, "Failure at %u %s\n", __LINE__, __FILE__); }

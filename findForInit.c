@@ -1,6 +1,7 @@
 #include "findForInit.h"
 #include <stdbool.h>
 #include <time.h>
+#include <malloc.h>
 
 uint32_t vkGetBestComputeQueueIndex(Ctx *context, VkPhysicalDevice physicalDevice) {
     uint32_t queueFamilyPropertiesCount = 0;
@@ -9,7 +10,7 @@ uint32_t vkGetBestComputeQueueIndex(Ctx *context, VkPhysicalDevice physicalDevic
             physicalDevice, &queueFamilyPropertiesCount, 0);
 
     VkQueueFamilyProperties* const queueFamilyProperties = 
-        (VkQueueFamilyProperties*)_alloca(
+        (VkQueueFamilyProperties*)_malloca(
             sizeof(VkQueueFamilyProperties) * queueFamilyPropertiesCount);
 
     vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, 
@@ -85,7 +86,7 @@ VkPhysicalDevice vkGetPhysicalDevice_IGPOrDefault(
         return device;
     }
 
-    VkPhysicalDevice* const physicalDevices = (VkPhysicalDevice*)_alloca(
+    VkPhysicalDevice* const physicalDevices = (VkPhysicalDevice*)_malloca(
         sizeof(VkPhysicalDevice) * physicalDeviceCount
     );
 
