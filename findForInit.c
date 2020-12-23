@@ -1,7 +1,7 @@
 #include "findForInit.h"
 #include <stdbool.h>
 #include <time.h>
-#include <malloc.h>
+#include <stdlib.h>
 
 uint32_t vkGetBestComputeQueueIndex(Ctx *context, VkPhysicalDevice physicalDevice) {
     uint32_t queueFamilyPropertiesCount = 0;
@@ -10,7 +10,7 @@ uint32_t vkGetBestComputeQueueIndex(Ctx *context, VkPhysicalDevice physicalDevic
             physicalDevice, &queueFamilyPropertiesCount, 0);
 
     VkQueueFamilyProperties* const queueFamilyProperties = 
-        (VkQueueFamilyProperties*)_malloca(
+        (VkQueueFamilyProperties*)malloc(
             sizeof(VkQueueFamilyProperties) * queueFamilyPropertiesCount);
 
     vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, 
@@ -27,6 +27,7 @@ uint32_t vkGetBestComputeQueueIndex(Ctx *context, VkPhysicalDevice physicalDevic
         
         if(!(VK_QUEUE_GRAPHICS_BIT & maskedFlags) && 
                 (VK_QUEUE_COMPUTE_BIT & maskedFlags)) {
+            free(queueFamilyProperties);
             return queueFamilyIndex;
         }
     }
@@ -43,10 +44,12 @@ uint32_t vkGetBestComputeQueueIndex(Ctx *context, VkPhysicalDevice physicalDevic
         if ((VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT | VK_QUEUE_TRANSFER_BIT) 
                 & maskedFlags) {
             
+            free(queueFamilyProperties);
             return queueFamilyIndex;
         }
     }
 
+    free(queueFamilyProperties);
     raise(context, "no queue family found out of %u queues", 
             queueFamilyPropertiesCount);
 
@@ -86,7 +89,7 @@ VkPhysicalDevice vkGetPhysicalDevice_IGPOrDefault(
         return device;
     }
 
-    VkPhysicalDevice* const physicalDevices = (VkPhysicalDevice*)_malloca(
+    VkPhysicalDevice* const physicalDevices = (VkPhysicalDevice*)malloc(
         sizeof(VkPhysicalDevice) * physicalDeviceCount
     );
 
@@ -101,6 +104,6 @@ VkPhysicalDevice vkGetPhysicalDevice_IGPOrDefault(
             break;
         }
     };
-
+    free(physicalDevices);
     return device;
 }

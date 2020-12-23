@@ -15,8 +15,6 @@ shader_target = custom_target(
 	install_dir: '/'
 )
 
-add_project_arguments('-D_alloca=alloca', language : 'c')
-
 depends = [dependency('vulkan', required: true)]
 
 if build_machine.system() == 'darwin'
