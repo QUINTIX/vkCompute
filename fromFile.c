@@ -27,7 +27,6 @@
 #include <stddef.h>
 #include <vulkan/vulkan.h>
 #include <time.h>
-#include <malloc.h>
 
 #include "tryCatch.h"
 #include "findForInit.h"

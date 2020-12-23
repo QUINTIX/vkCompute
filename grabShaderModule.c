@@ -1,7 +1,7 @@
 #include <vulkan/vulkan.h>
 #include <stdio.h>
 #include <stddef.h>
-#include <malloc.h>
+#include <stdlib.h>
 #include "tryCatch.h"
 
 #include "grabShaderModule.h"
@@ -18,7 +18,7 @@ VkShaderModule loadFromSPVFile(
         fseek(shaderFile, 0, SEEK_END);
         const size_t shaderSize = (size_t)ftell(shaderFile);
         rewind(shaderFile);
-        void* shader = (void*)_malloca(shaderSize);
+        void* shader = (void*)malloc(shaderSize);
         fread(shader, shaderSize, 1, shaderFile);
     fclose(shaderFile);
 
@@ -30,8 +30,9 @@ VkShaderModule loadFromSPVFile(
     if(VK_SUCCESS != vkCreateShaderModule(
             logicalDevice, &shaderModuleCreateInfo, NULL, &shader_module)
     ){
+        free(shader);
         raise(context, "unable to load shader module %s", fileName);
     }
-
+    free(shader);
     return shader_module;
 }
