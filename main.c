@@ -65,8 +65,8 @@ void doStuffOnDevice(Ctx *context_, VkPhysicalDevice physicalDevice) {
 
     vkGetPhysicalDeviceMemoryProperties(physicalDevice, &properties);
 
-    const int32_t bufferLength = 16384;
-    const uint32_t bufferSize = sizeof(float) * bufferLength;
+    const uint32_t bufferLength = 16384;
+    const size_t bufferSize = sizeof(float) * bufferLength;
 
     // we are going to need two buffers from this one memory
     const VkDeviceSize memorySize = bufferSize * 2; 
@@ -75,7 +75,7 @@ void doStuffOnDevice(Ctx *context_, VkPhysicalDevice physicalDevice) {
         &ctx, &properties, 
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | 
             VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-        (size_t)bufferSize );
+       (size_t) memorySize );
     printf("found memory slot at index %u\n", memoryTypeIndex);
 
     const VkMemoryAllocateInfo memoryAllocateInfo = {
@@ -127,24 +127,22 @@ void doStuffOnDevice(Ctx *context_, VkPhysicalDevice physicalDevice) {
     VkShaderModule shader_module = loadFromSPVFile(&ctx, logicalDevice,
             (VkShaderModuleCreateFlags)0, "shader.comp.spv");
     
-
     clock_t afterLoadShader = clock();
 
     #define NUM_BINDINGS 2
     VkDescriptorSetLayoutBinding descriptorSetLayoutBindings[NUM_BINDINGS] = {
-      {
-        0,
-        VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-        1,
-        VK_SHADER_STAGE_COMPUTE_BIT,
-        (const VkSampler*)NULL
-      },
-      {
-        1,
-        VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-        1,
-        VK_SHADER_STAGE_COMPUTE_BIT,
-        (const VkSampler*)NULL
+      { 
+        .binding = 0,
+        .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+        .descriptorCount = 1,
+        .stageFlags = VK_SHADER_STAGE_COMPUTE_BIT,
+        .pImmutableSamplers = (const VkSampler*)NULL
+      }, {
+        .binding = 1,
+        .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+        .descriptorCount = 1,
+        .stageFlags = VK_SHADER_STAGE_COMPUTE_BIT,
+        .pImmutableSamplers = (const VkSampler*)NULL
       }
     };
 
@@ -200,7 +198,7 @@ void doStuffOnDevice(Ctx *context_, VkPhysicalDevice physicalDevice) {
 
     VkDescriptorPoolSize descriptorPoolSize = {
       VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-      2
+      NUM_BINDINGS
     };
 
     VkDescriptorPoolCreateInfo descriptorPoolCreateInfo = {
@@ -224,17 +222,13 @@ void doStuffOnDevice(Ctx *context_, VkPhysicalDevice physicalDevice) {
     VkDescriptorSet descriptorSet;
     RAISE_ON_BAD_RESULT(vkAllocateDescriptorSets(logicalDevice,
             &descriptorSetAllocateInfo, &descriptorSet));
-
+    
+    #define BUFFER_OFFSET 0
     VkDescriptorBufferInfo in_descriptorBufferInfo = {
-      in_buffer,
-      0,
-      VK_WHOLE_SIZE
+      in_buffer, BUFFER_OFFSET, VK_WHOLE_SIZE
     };
-
     VkDescriptorBufferInfo out_descriptorBufferInfo = {
-      out_buffer,
-      0,
-      VK_WHOLE_SIZE
+      out_buffer, BUFFER_OFFSET, VK_WHOLE_SIZE
     };
 
     VkWriteDescriptorSet writeDescriptorSet[2] = {
@@ -248,8 +242,7 @@ void doStuffOnDevice(Ctx *context_, VkPhysicalDevice physicalDevice) {
         (const VkDescriptorImageInfo*) NULL,
         &in_descriptorBufferInfo,
         (const VkBufferView*) NULL
-      },
-      {
+      }, {
         VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, NULL,
         descriptorSet,
         1,
@@ -342,6 +335,19 @@ void doStuffOnDevice(Ctx *context_, VkPhysicalDevice physicalDevice) {
             printf("\n");
         }
     }
+
+    vkUnmapMemory(logicalDevice, memory);
+    vkDestroyCommandPool(logicalDevice, commandPool, (const VkAllocationCallbacks*) NULL);
+    vkDestroyShaderModule(logicalDevice, shader_module, (const VkAllocationCallbacks*) NULL);
+    vkDestroyDescriptorSetLayout(logicalDevice, descriptorSetLayout, (const VkAllocationCallbacks*) NULL);
+    vkDestroyDescriptorPool(logicalDevice, descriptorPool, (const VkAllocationCallbacks*) NULL);
+    vkDestroyPipelineLayout(logicalDevice, pipelineLayout, (const VkAllocationCallbacks*) NULL);
+    vkDestroyPipeline(logicalDevice, pipeline, (const VkAllocationCallbacks*) NULL);
+    vkDestroyBuffer(logicalDevice, in_buffer, (const VkAllocationCallbacks*) NULL);
+    vkDestroyBuffer(logicalDevice, out_buffer, (const VkAllocationCallbacks*) NULL);
+    vkFreeMemory(logicalDevice, memory, (const VkAllocationCallbacks*) NULL);
+    vkDestroyDevice(logicalDevice, (const VkAllocationCallbacks*) NULL);
+
     printf("\n %s\t%lu\n %s\t%lu\n %s\t%lu\n %s\t%lu\n %s\t%lu\n %s\t%lu\n %s\t%lu\n",
         "beforeWrite", beforeWrite,
         "afterWrite", afterWrite,
@@ -350,6 +356,7 @@ void doStuffOnDevice(Ctx *context_, VkPhysicalDevice physicalDevice) {
         "beforeReMap", beforeReMap,
         "finallyDone", finallyDone,
         "CLOCKS_PER_SEC", (unsigned long)CLOCKS_PER_SEC);
+
 }
 
 int main(int argc, const char * const argv[]) {
@@ -369,7 +376,7 @@ int main(int argc, const char * const argv[]) {
         VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO, NULL,
         (VkInstanceCreateFlags) 0, 
         &applicationInfo, 
-        0, (const char* const*)NULL, 
+        1, (const char*[]) {"VK_LAYER_KHRONOS_validation",}, 
         0, (const char* const*)NULL
     };
 
@@ -383,8 +390,10 @@ int main(int argc, const char * const argv[]) {
     } CATCH {
         fprintf(stderr, "%s\n", ctx.msg);
         free((void*)ctx.msg);
+        vkDestroyInstance(instance, (const VkAllocationCallbacks*) NULL);
         exit(EXIT_FAILURE);
     }
 
+    vkDestroyInstance(instance, (const VkAllocationCallbacks*) NULL);
     return EXIT_SUCCESS;
 }

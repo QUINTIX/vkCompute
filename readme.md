@@ -52,14 +52,14 @@ patrickquin@Patricks-MBP vkcompute % sloc -a comp=c *.c *.h shader.comp
 
 ---------- Result ------------
 
-            Physical :  636
-              Source :  483
+            Physical :  660
+              Source :  507
              Comment :  39
  Single-line comment :  30
        Block comment :  9
-               Mixed :  2
+               Mixed :  3
  Empty block comment :  0
-               Empty :  116
+               Empty :  117
                To Do :  0
 
 Number of files read :  8
