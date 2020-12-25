@@ -24,6 +24,6 @@ endif
 executable('vkcompute',
            'grabShaderModule.c',
            'findForInit.c',
-           'fromFile.c',
+           'main.c',
            install : true,
            dependencies : depends)
